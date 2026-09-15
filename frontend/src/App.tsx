@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import LandingPage from "./LandingPage";
+import LandingPage from "./Landingpage";
 import { DOMAINS } from "./Domains";
 
 const BACKEND_URL = "http://127.0.0.1:8000";
