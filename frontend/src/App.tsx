@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import LandingPage from "./Landingpage";
 import { DOMAINS } from "./Domains";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://aptigrad.onrender.com";
 
 type Screen = "landing" | "lobby" | "interview";
 type PermissionState = "idle" | "checking" | "granted" | "denied";
