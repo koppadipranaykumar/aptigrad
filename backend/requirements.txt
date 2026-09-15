@@ -1,6 +1,8 @@
-anthropic==1.3.0
-fastapi==0.141.1
-pydantic==2.13.5
-python-dotenv==1.2.3
-uvicorn==0.52.4
-requests==2.31.0
+fastapi
+uvicorn
+python-dotenv
+requests
+edge-tts
+faster-whisper
+pydantic
+python-multipart
