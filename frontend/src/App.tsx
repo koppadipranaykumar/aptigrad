@@ -215,9 +215,6 @@ export default function App() {
   const [hiddenDifficulty, setHiddenDifficulty] = useState<string>("Medium");
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
 
-  const [scores, setScores] = useState<number[]>([]);
-  const [feedbackList, setFeedbackList] = useState<string[]>([]);
-
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [status, setStatus] = useState<CallStatus>("ready");
@@ -362,8 +359,6 @@ export default function App() {
 
       setCurrentQuestion(data.question_text);
       setAskedQuestions([data.question_text]);
-      setScores([]);
-      setFeedbackList([]);
       setQuestionCount(1);
       setHiddenDifficulty("Medium");
       setScreen("interview");
@@ -461,12 +456,7 @@ export default function App() {
 
       setCurrentQuestion(data.question_text);
 
-      if (data.score !== undefined) {
-        setScores((prev) => [...prev, data.score]);
-      }
-      if (data.feedback) {
-        setFeedbackList((prev) => [...prev, data.feedback]);
-      }
+     
 
       setAskedQuestions((prev) => {
         if (prev.includes(data.question_text)) return prev;
