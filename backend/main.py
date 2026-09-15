@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import requests
 import uuid
 import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, Form, HTTPException
