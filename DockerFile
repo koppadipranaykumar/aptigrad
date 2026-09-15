@@ -1,0 +1,26 @@
+FROM python:3.10-slim
+
+# Install system dependencies & Ollama runtime
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL https://ollama.com/install.sh | sh
+
+WORKDIR /app
+
+# Copy requirement files and install Python packages
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY backend/ ./backend/
+
+# Download your GGUF model directly from Hugging Face at image build time
+RUN curl -L https://huggingface.co/Pranay8/aptigrad-llama-3.2-3b/resolve/main/llama-3.2-3b-instruct.Q4_K_M.gguf -o ./backend/ai_training/llama-3.2-3b-instruct.Q4_K_M.gguf
+
+EXPOSE 8000
+
+# Start Ollama engine, register model weights, and launch Uvicorn
+CMD ollama serve & sleep 5 && ollama create aptigrad-interviewer -f ./backend/ai_training/Modelfile && uvicorn backend.main:app --host 0.0.0.0 --port 8000
