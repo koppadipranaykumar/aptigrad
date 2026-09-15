@@ -1,15 +1,34 @@
-# Python
+# Python / Virtual Environments
 venv/
 .venv/
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 .env
 
-# Node
-node_modules/
-dist/
-.vite/
+# Model Weights & Fine-Tuning Outputs (Excludes heavy GGUF files)
+*.gguf
+ai_training/*.gguf
+ai_training/outputs/
+outputs/
 
-# General
+# Temporary Audio Runtime Files
+temp_audio/*
+!temp_audio/.gitkeep
+
+# Node / Frontend Build Outputs
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+.vite/
+frontend/.vite/
+
+# General & IDE Configs
 .DS_Store
 *.log
+.vscode/
+.idea/
+
+*.jsonl
+backend/ai_training/dataset.jsonl
