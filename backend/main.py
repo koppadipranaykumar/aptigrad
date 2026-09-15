@@ -1,14 +1,13 @@
 import os
 import re
 import json
-import requests
 import uuid
 import asyncio
+import requests
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-import requests
 import edge_tts
 from faster_whisper import WhisperModel
 
@@ -22,7 +21,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-OLLAMA_CHAT_URL = "http://localhost:11434/api/chat"
+# Groq Cloud API Setup (Replaces local Ollama)
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
+
 TEMP_AUDIO_DIR = "temp_audio"
 os.makedirs(TEMP_AUDIO_DIR, exist_ok=True)
 
@@ -138,35 +140,35 @@ async def start_interview(domain: str = Form(...)):
         "is_complete": False
     }
 
-def ask_ollama_direct(domain: str, current_q: str, user_answer: str, current_diff: str, used_questions: list[str]) -> dict:
+def ask_groq_direct(domain: str, current_q: str, user_answer: str, current_diff: str, used_questions: list[str]) -> dict:
     user_content = (
         f"Domain: {domain}\n"
         f"Current Difficulty: {current_diff}\n"
         f"Question: {current_q}\n"
         f"Candidate Answer: {user_answer}\n"
-        f"STRICT INSTRUCTION: Ask a question strictly about {domain}."
+        f"STRICT INSTRUCTION: Ask a specific technical question strictly about {domain}."
     )
 
-    messages = [
-        {"role": "system", "content": INTERVIEWER_SYSTEM_PROMPT},
-        {"role": "user", "content": user_content}
-    ]
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
 
     payload = {
-        "model": "aptigrad-interviewer",
-        "messages": messages,
-        "format": "json",
-        "stream": False,
-        "options": {
-            "temperature": 0.7
-        }
+        "model": "llama-3.2-3b-preview",
+        "messages": [
+            {"role": "system", "content": INTERVIEWER_SYSTEM_PROMPT},
+            {"role": "user", "content": user_content}
+        ],
+        "response_format": {"type": "json_object"},
+        "temperature": 0.7
     }
 
     for attempt in range(1, 4):
         try:
-            res = requests.post(OLLAMA_CHAT_URL, json=payload, timeout=90)
+            res = requests.post(GROQ_CHAT_URL, headers=headers, json=payload, timeout=30)
             res_json = res.json()
-            raw_text = res_json.get("message", {}).get("content", "").strip()
+            raw_text = res_json.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
 
             if not raw_text:
                 continue
@@ -178,14 +180,8 @@ def ask_ollama_direct(domain: str, current_q: str, user_answer: str, current_dif
             if len(candidate_q) > 10 and candidate_q != current_q and candidate_q not in used_questions and not is_banned:
                 return parsed
 
-            payload["messages"].append({"role": "assistant", "content": raw_text})
-            payload["messages"].append({
-                "role": "user",
-                "content": f"Do NOT ask generic questions. Ask a specific, brand new technical question strictly about {domain}."
-            })
-
         except Exception as e:
-            print(f"[Ollama Call Exception] attempt {attempt}: {e}")
+            print(f"[Groq Call Exception] attempt {attempt}: {e}")
 
     return {}
 
@@ -220,16 +216,16 @@ def evaluate_and_generate_next(
             "is_reasking": True
         }
 
-    ollama_res = ask_ollama_direct(domain, current_q, user_answer, current_diff, used_questions)
-    next_question_text = ollama_res.get("next_question", "").strip()
+    groq_res = ask_groq_direct(domain, current_q, user_answer, current_diff, used_questions)
+    next_question_text = groq_res.get("next_question", "").strip()
 
     if "<" in next_question_text or "strictly about" in next_question_text:
         next_question_text = next_question_text.replace("<", "").replace(">", "").strip()
 
     if not next_question_text:
         return {
-            "score": ollama_res.get("score", 5),
-            "difficulty_change": ollama_res.get("difficulty_change", "MAINTAIN"),
+            "score": groq_res.get("score", 5),
+            "difficulty_change": groq_res.get("difficulty_change", "MAINTAIN"),
             "feedback": "Clear explanation, let's go deeper.",
             "next_question": f"Could you elaborate further on core concepts within {domain}?",
             "is_complete": False,
@@ -237,9 +233,9 @@ def evaluate_and_generate_next(
         }
 
     return {
-        "score": ollama_res.get("score", 7),
-        "difficulty_change": ollama_res.get("difficulty_change", "MAINTAIN"),
-        "feedback": ollama_res.get("feedback", "Good explanation."),
+        "score": groq_res.get("score", 7),
+        "difficulty_change": groq_res.get("difficulty_change", "MAINTAIN"),
+        "feedback": groq_res.get("feedback", "Good explanation."),
         "next_question": next_question_text,
         "is_complete": False,
         "is_reasking": False
